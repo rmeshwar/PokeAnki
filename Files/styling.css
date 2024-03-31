@@ -1,0 +1,226 @@
+/* Profile: PokeAnki || Satus: Saved */ 
+
+
+
+
+
+@font-face { font-family: Pixelfont; src: url('_Pixelfont.ttf'); }
+
+.card {
+font-family: Pixelfont
+ font-family: arial;
+ font-size: 35px;
+ text-align: center;
+ color: black	;
+ background: url(_tiles1.png);
+}
+
+.card.night_mode {
+ color: white;
+ background-color: white;
+}
+
+.text{ 	/*Styles the roman text*/
+font-family: Pixelfont, Geneva, sans-serif;
+font-size: 40px;
+letter-spacing: 2px;
+color: #f8f8f8;
+font-weight: bold;
+text-shadow:
+   -2px -2px 0 #585858,  
+    2px -2px 0 #585858,
+    -2px 2px 0 #585858,
+     2px 2px 0 #585858;
+
+}
+
+
+#info{	/*Styles the top bar*/
+font-size: 40px;
+background-color: #E83030;
+text-align: left;
+position:absolute;
+top:0px;
+left:0px;
+right:0px;
+border-bottom: 5px solid #000000;
+padding-left: 3px;
+
+-webkit-box-shadow:
+25px 0px 0px 0px #901020 inset,
+32px 0px 0px 0px #c02028 inset,
+-25px 0px 0px 0px #901020 inset,
+-32px 0px 0px 0px #c02028 inset, 
+0px 9px 25px 0px #a8a8a8;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+#sprite{
+border-top:3px solid #000000;
+border-right:3px solid #000000;
+border-bottom:3px solid #000000;
+border-left:3px solid #000000;
+-webkit-border-radius: 5px 5px 5px 5px;
+
+padding: 0px 0px 0px 0px;
+background-color: #f8f8f8;
+min-width: 250px;
+max-width: 250px;
+max-heigth: 250px;
+min-heigth: 250px;
+margin: 0px auto 40px auto;
+  overflow: hidden;
+}
+
+#sound{
+border-top:3px solid #A8A8A8;
+border-right:3px solid #A8A8A8;
+border-bottom:3px solid #A8A8A8;
+border-left:3px solid #A8A8A8;
+-webkit-border-radius: 5px 5px 5px 5px;
+
+padding: 0px 0px 0px 0px;
+background-color: #f8f8f8;
+max-width: 135px;
+margin: 60px auto 8px auto;
+  overflow: hidden;
+}
+
+#types{
+border-top:3px solid #A8A8A8;
+border-right:3px solid #A8A8A8;
+border-bottom:3px solid #A8A8A8;
+border-left:3px solid #A8A8A8;
+-webkit-border-radius: 5px 5px 5px 5px;
+
+padding: 0px 0px 0px 0px;
+background-color: #f8f8f8;
+max-width: 135px;
+margin: 0px auto 40px auto;
+  overflow: hidden;
+}
+
+#BST{
+border-top:3px solid #000000;
+border-right:3px solid #000000;
+border-bottom:3px solid #000000;
+border-left:3px solid #000000;
+-webkit-border-radius: 5px 5px 5px 5px;
+
+padding: 0px 0px 0px 0px;
+background-color: #f8f8f8;
+max-width: 1000px;
+margin: 0px auto 40px auto;
+  overflow: hidden;
+}
+
+#class{
+font-size: 40px;
+background-color: #E83030;
+text-align:center;
+
+border-top:0px solid #000000;
+border-right:2px solid #000000;
+border-bottom:2px solid #000000;
+border-left:2px solid #000000;
+-webkit-border-radius: 0px 0px 5px 5px;
+
+margin-bottom: 50px;
+background-color: #f8f8f8;
+padding: 1px 3px 3px 3px; 
+margin: 0px 20px 50px 20px;
+}
+
+#name{
+font-size: 60px;
+background-color: #E83030;
+text-transform: uppercase;
+text-align:center;
+
+border-top:2px solid #000000;
+border-right:2px solid #000000;
+border-bottom:5px solid #f898a0;
+border-left:2px solid #000000;
+-webkit-border-radius: 5px 5px 0px 0px;
+
+background-color: #E83030;
+padding: 5px 3px 2px 3px; 
+margin: 5px 20px 0px 20px;
+}
+
+#Abil{
+font-size: 45px;
+background-color: #E83030;
+text-transform: uppercase;
+text-align:center;
+
+border-top:2px solid #000000;
+border-right:2px solid #000000;
+border-bottom:5px solid #a18c8c;
+border-left:2px solid #000000;
+-webkit-border-radius: 5px 5px 0px 0px;
+
+background-color: #999999;
+padding: 5px 3px 2px 3px; 
+margin: 5px 20px 0px 20px;
+}
+
+#Abil2{
+font-size: 40px;
+background-color: #E83030;
+text-align:center;
+
+border-top:0px solid #000000;
+border-right:2px solid #000000;
+border-bottom:2px solid #000000;
+border-left:2px solid #000000;
+-webkit-border-radius: 0px 0px 5px 5px;
+
+margin-bottom: 50px;
+background-color: #f8f8f8;
+padding: 1px 3px 3px 3px; 
+margin: 0px 20px 50px 20px;
+}
+
+#extra{
+font-size: 45px;
+background-color: #E83030;
+text-transform: uppercase;
+text-align:center;
+
+border-top:2px solid #000000;
+border-right:2px solid #000000;
+border-bottom:5px solid #a18c8c;
+border-left:2px solid #000000;
+-webkit-border-radius: 5px 5px 0px 0px;
+
+background-color: #999999;
+padding: 5px 3px 2px 3px; 
+margin: 5px 20px 0px 20px;
+}
+
+#extra2{
+font-size: 40px;
+background-color: #E83030;
+text-align:center;
+
+border-top:0px solid #000000;
+border-right:2px solid #000000;
+border-bottom:2px solid #000000;
+border-left:2px solid #000000;
+-webkit-border-radius: 0px 0px 5px 5px;
+
+margin-bottom: 50px;
+background-color: #ffffff;
+padding: 1px 3px 3px 3px; 
+margin: 0px 20px 50px 20px;
+}
+
+
+#japname{
+font-size: 40px;
+color:black;
+}
