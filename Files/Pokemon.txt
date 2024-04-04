@@ -39,10 +39,10 @@ Number,Name,Form,Type 1,Type 2,HP,Attack,Defense,Sp.Attack,Sp.Defense,Speed
 027,Sandshrew,Alolan Sandshrew,Ice,Steel,50,75,90,10,35,40
 028,Sandslash,,Ground,,75,100,110,45,55,65
 028,Sandslash,Alolan Sandslash,Ice,Steel,75,100,120,25,65,65
-029,Nidoran♀,,Poison,,55,47,52,40,40,41
+029,Nidoran-f,,Poison,,55,47,52,40,40,41
 030,Nidorina,,Poison,,70,62,67,55,55,56
 031,Nidoqueen,,Poison,Ground,90,92,87,75,85,76
-032,Nidoran♂,,Poison,,46,57,40,40,40,50
+032,Nidoran-m,,Poison,,46,57,40,40,40,50
 033,Nidorino,,Poison,,61,72,57,55,55,65
 034,Nidoking,,Poison,Ground,81,102,77,85,75,85
 035,Clefairy,,Fairy,,70,45,48,60,65,35

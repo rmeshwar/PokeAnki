@@ -19,7 +19,7 @@ with open('Files/pokemon.txt', 'r') as file:
 def scrape_pokemon_details(pokemon):
     name = pokemon['Name']
     form = pokemon['Form']
-    url = f"https://pokemondb.net/pokedex/{name.lower()}"
+    url = f"https://pokemondb.net/pokedex/{name.lower().replace(' ', '-')}"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
@@ -43,20 +43,25 @@ def scrape_pokemon_details(pokemon):
     abilities_rows = soup.find_all('th', string='Abilities')
     abilities = []
 
+    all_forms = [p for p in pokemon_data if p['Name'] == name]
+    current_form_index = all_forms.index(pokemon)
+
     if form:  # If the Pokémon is an alternate form
-        if len(abilities_rows) == 2:
-            abilities_row = abilities_rows[
-                1]  # Use the second set for alternate forms if only one alternate form is present
-        elif len(abilities_rows) == 3:
-            # For Pokémon with two Mega forms, determine which set to use based on the form
-            if 'X' in form:
-                abilities_row = abilities_rows[1]  # Second occurrence for Mega X
-            elif 'Y' in form:
-                abilities_row = abilities_rows[2]  # Third occurrence for Mega Y
-            elif 'Alolan' in form:
-                abilities_row = abilities_rows[1] # Basically just for Meowth
-            elif 'Galarian' in form:
-                abilities_row = abilities_rows[2]
+        if len(abilities_rows) > 1:
+            abilities_row = abilities_rows[current_form_index]
+        # if len(abilities_rows) == 2:
+        #     abilities_row = abilities_rows[
+        #         1]  # Use the second set for alternate forms if only one alternate form is present
+        # elif len(abilities_rows) == 3:
+        #     # For Pokémon with two Mega forms, determine which set to use based on the form
+        #     if 'X' in form:
+        #         abilities_row = abilities_rows[1]  # Second occurrence for Mega X
+        #     elif 'Y' in form:
+        #         abilities_row = abilities_rows[2]  # Third occurrence for Mega Y
+        #     elif 'Alolan' in form:
+        #         abilities_row = abilities_rows[1] # Basically just for Meowth
+        #     elif 'Galarian' in form:
+        #         abilities_row = abilities_rows[2]
         else:
             abilities_row = abilities_rows[0]  # Default to the first set if conditions don't match
     else:
@@ -78,36 +83,73 @@ def scrape_pokemon_details(pokemon):
     return classification, abilities
 
 def download_pokemon_sprite(pokemon):
-    base_url = "https://projectpokemon.org/home/docs/spriteindex_148/switch-sv-style-sprites-for-home-r153/"
-    sprite_folder = "Files/Sprites"
+    # base_url = "https://projectpokemon.org/home/docs/spriteindex_148/switch-sv-style-sprites-for-home-r153/"
+    # sprite_folder = "Files/Sprites"
+    #
+    # response = requests.get(base_url)
+    # soup = BeautifulSoup(response.content, 'html.parser')
+    #
+    # name = pokemon['Name']
+    # number = pokemon['Number'].zfill(4)
+    # form = pokemon['Form']
+    #
+    # all_forms = [p for p in pokemon_data if p['Name'] == name]
+    # current_form_index = all_forms.index(pokemon)
+    #
+    # if len(all_forms) > 1 and form != '':
+    #     alt_form_suffix = f"_{current_form_index:02}"
+    #     filename = f"{number}{alt_form_suffix}.png"
+    # else:
+    #     filename = f"{number}.png"
+    #
+    # img_tag = soup.find('img', alt=f"{filename}")
+    #
+    # if img_tag:
+    #     image_url = img_tag['src']
+    #     response = requests.get(image_url)
+    #     if response.status_code == 200:
+    #         path = f"Files/Sprites/{filename}"
+    #         with open(path, 'wb') as f:
+    #             f.write(response.content)
+    #         return path
+    #
+    # return None
 
-    response = requests.get(base_url)
+    # New base URL format
+    name = pokemon['Name'].lower().replace(' ', '-')
+    url = f"https://pokemondb.net/pokedex/{name}"
+
+    response = requests.get(url)
+    if response.status_code != 200:
+        return None  # Could not fetch the page
+
     soup = BeautifulSoup(response.content, 'html.parser')
 
-    name = pokemon['Name']
-    number = pokemon['Number'].zfill(4)
-    form = pokemon['Form']
+    # Find all img tags within the artwork section
+    img_tags = soup.find_all('img', alt=lambda alt: alt and 'artwork' in alt)
 
-    all_forms = [p for p in pokemon_data if p['Name'] == name]
+    # If there are multiple forms, ensure we only consider unique artworks for each form
+    all_forms = [p for p in pokemon_data if p['Name'].lower() == pokemon['Name'].lower()]
     current_form_index = all_forms.index(pokemon)
 
-    if len(all_forms) > 1 and form != '':
-        alt_form_suffix = f"_{current_form_index:02}"
-        filename = f"{number}{alt_form_suffix}.png"
+    if len(all_forms) > 1:
+        filename_suffix = f"_{current_form_index:02}"
     else:
-        filename = f"{number}.png"
+        filename_suffix = ''
 
-    img_tag = soup.find('img', alt=f"{filename}")
+    # Safety check to avoid index out of range
+    if current_form_index < len(img_tags):
+        image_url = img_tags[current_form_index]['src']
 
-    if img_tag:
-        image_url = img_tag['src']
+        filename = f"{pokemon['Number'].zfill(4)}{filename_suffix}.jpg"
+        path = f"Files/Sprites/{filename}"
+
+        # Download and save the image
         response = requests.get(image_url)
         if response.status_code == 200:
-            path = f"Files/Sprites/{filename}"
             with open(path, 'wb') as f:
                 f.write(response.content)
             return path
-
     return None
 
 def download_cry(pokemon):
@@ -115,17 +157,89 @@ def download_cry(pokemon):
     response = requests.get(cry_url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
-    name = pokemon['Name'].lower().replace(' ', '')
+    name = pokemon['Name'].lower().replace(' ', '').replace('-', '')
     form = pokemon['Form']
 
+    all_forms = [p for p in pokemon_data if p['Name'] == pokemon['Name']]
+    current_form_index = all_forms.index(pokemon)
 
-    if 'Mega' in form:
-        if 'X' in form:
-            filename = f"{name}-megax.mp3"
-        elif 'Y' in form:
-            filename = f"{name}-megay.mp3"
+    if current_form_index != 0:
+        if 'Mega' in form:
+            if 'X' in form:
+                filename = f"{name}-megax.mp3"
+            elif 'Y' in form:
+                filename = f"{name}-megay.mp3"
+            else:
+                filename = f"{name}-mega.mp3"
+        elif name == 'calyrex':
+            if current_form_index == 1:
+                filename = "calyrex-ice.mp3"
+            elif current_form_index == 2:
+                filename = "calyrex-shadow.mp3"
+        elif 'Therian' in form:
+            filename = f"{name}-therian.mp3"
+        elif 'Eternamax' in form:
+            filename = f"{name}-eternamax.mp3"
+        elif name == 'gimmighoul':
+            if current_form_index == 0:
+                filename = "gimmighoul.mp3"
+            elif current_form_index == 1:
+                filename = "gimmighoul-roaming.mp3"
+        elif 'Primal' in form:
+            filename = f"{name}-primal.mp3"
+        elif name == 'hoopa':
+            if current_form_index == 0:
+                filename = "hoopa.mp3"
+            elif current_form_index == 1:
+                filename = "hoopa-unbound.mp3"
+        elif name == 'kyurem':
+            if current_form_index == 1:
+                filename = "kyurem-white.mp3"
+            elif current_form_index == 2:
+                filename = "kyurem-black.mp3"
+        elif name == 'lycanroc':
+            if current_form_index == 1:
+                filename = "lycanroc-midnight.mp3"
+            elif current_form_index == 2:
+                filename = "lycanroc-dusk.mp3"
+        elif name == 'necrozma':
+            if current_form_index == 1:
+                filename = "necrozma-dawnwings.mp3"
+            elif current_form_index == 2:
+                filename = "necrozma-duskmane.mp3"
+            elif current_form_index == 3:
+                filename = "necrozma-ultra.mp3"
+        elif name == 'oricorio':
+            if current_form_index == 1:
+                filename = "oricorio-pompom.mp3"
+            elif current_form_index == 2:
+                filename = "oricorio-pau.mp3"
+            elif current_form_index == 3:
+                filename = "oricorio-sensu.mp3"
+        elif name == "porygon-z":
+            filename = "porygonz.mp3"
+        elif name == "shaymin" and current_form_index == 1:
+            filename = "shaymin-sky.mp3"
+        elif name == 'tatsugiri':
+            if current_form_index == 1:
+                filename = "tatsugiri-droopy.mp3"
+            elif current_form_index == 2:
+                filename = "tatsugiri-stretchy.mp3"
+        elif name == "toxtricity" and current_form_index == 1:
+            filename = "toxtricity-lowkey.mp3"
+        elif name == "urshifu" and current_form_index == 1:
+            filename = "urshifu-rapidstrike.mp3"
+        elif name == "wishiwashi" and current_form_index == 1:
+            filename = "wishiwashi-school.mp3"
+        elif 'Crowned' in form:
+            filename = f"{name}-crowned.mp3"
+        elif name == 'zygarde':
+            if current_form_index == 1:
+                filename = "zygarde-10.mp3"
+            elif current_form_index == 2:
+                filename = "zygarde-complete.mp3"
         else:
-            filename = f"{name}-mega.mp3"
+            filename = f"{name}.mp3"
     else:
         filename = f"{name}.mp3"
 
@@ -172,7 +286,7 @@ def create_base_stat_graph(pokemon):
             colors.append('#ffdd57')
         elif 100 <= stat < 120:
             colors.append('#a0e515')
-        elif 120 <= stat < 140:
+        elif 120 <= stat <= 140:
             colors.append('#1fb553')
         else:
             colors.append('#00c2b8')
@@ -253,7 +367,7 @@ def create_pokemon_anki(pokemon_data):
 
     media_files = []
 
-    for x in range(0, 203):
+    for x in range(0, 100):
         pokemon = pokemon_data[x]
         # Assuming scrape_pokemon_details, download_pokemon_sprite, download_cry, and create_base_stat_graph are defined
         classification, abilities = scrape_pokemon_details(pokemon)
@@ -322,6 +436,7 @@ def create_pokemon_anki(pokemon_data):
         deck.add_note(note)
         temp = pokemon['Name'] if (pokemon['Form'] == '') else (pokemon['Form'])
         print(f"Pokemon Added: #{pokemon['Number']} {temp}")
+        print(pokemon)
 
 
         # Create the Anki package with media files
@@ -329,18 +444,19 @@ def create_pokemon_anki(pokemon_data):
     package.media_files = media_files
     package.write_to_file('pokemon_deck.apkg')
 
-all_forms = [p for p in pokemon_data if p['Name'] == 'Calyrex']
-index = pokemon_data.index(all_forms[2])
-poketest = pokemon_data[index]
-# classification, abilities = scrape_pokemon_details(poketest)
-# print(poketest['Name']) if (poketest['Form'] == '') else print(poketest['Form'])
-# print(classification, abilities)
 # print(pokemon_data)
-# create_base_stat_graph(pokemon_data[8])
-#
-print(download_pokemon_sprite(poketest))
-# print(download_cry(pokemon_data[7]))
+# all_forms = [p for p in pokemon_data if p['Name'] == 'Nidoran-f']
+# print(all_forms)
+# for form in all_forms:
+#     index = pokemon_data.index(form)
+#     poketest = pokemon_data[index]
+#     print("Name: " + poketest['Name']) if (poketest['Form'] == '') else print(poketest['Form'])
+#     classification, abilities = scrape_pokemon_details(poketest)
+#     print(abilities)
+#     print(create_base_stat_graph(poketest))
+#     print(download_pokemon_sprite(poketest))
+#     print(download_cry(poketest))
 
-# print(pokemon_data)
+
 
 create_pokemon_anki(pokemon_data)
