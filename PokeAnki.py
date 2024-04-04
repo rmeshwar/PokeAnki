@@ -4,17 +4,21 @@ import os
 import genanki as genanki
 import requests
 from bs4 import BeautifulSoup
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
 pokemon_data = []
 
-with open('Files\pokemon.txt', 'r') as file:
+with open('Files/pokemon.txt', 'r') as file:
     reader = csv.DictReader(file);
     for row in reader:
         pokemon_data.append(row);
 
-def scrape_pokemon_details(name):
+def scrape_pokemon_details(pokemon):
+    name = pokemon['Name']
+    form = pokemon['Form']
     url = f"https://pokemondb.net/pokedex/{name.lower()}"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
@@ -24,8 +28,39 @@ def scrape_pokemon_details(name):
         classification = classification_row.find_next_sibling('td').text
     else:
         classification = "Not found"
-    abilities_row = soup.find('th', string='Abilities')
+
+    # Try to find the paragraph with generation info more flexibly
+    paragraphs = soup.find_all('p')
+    gen_info_text = None
+    for paragraph in paragraphs:
+        if 'introduced in' in paragraph.text:
+            gen_info_text = paragraph.find('abbr').text if paragraph.find('abbr') else None
+            break
+
+    if gen_info_text:
+        classification += f" | {gen_info_text}"  # Append the generation info to the classification
+
+    abilities_rows = soup.find_all('th', string='Abilities')
     abilities = []
+
+    if form:  # If the Pokémon is an alternate form
+        if len(abilities_rows) == 2:
+            abilities_row = abilities_rows[
+                1]  # Use the second set for alternate forms if only one alternate form is present
+        elif len(abilities_rows) == 3:
+            # For Pokémon with two Mega forms, determine which set to use based on the form
+            if 'X' in form:
+                abilities_row = abilities_rows[1]  # Second occurrence for Mega X
+            elif 'Y' in form:
+                abilities_row = abilities_rows[2]  # Third occurrence for Mega Y
+            elif 'Alolan' in form:
+                abilities_row = abilities_rows[1] # Basically just for Meowth
+            elif 'Galarian' in form:
+                abilities_row = abilities_rows[2]
+        else:
+            abilities_row = abilities_rows[0]  # Default to the first set if conditions don't match
+    else:
+        abilities_row = abilities_rows[0]  # Use the first set for the base form
     if abilities_row:
         abilities_td = abilities_row.find_next_sibling('td')
         for a in abilities_td.find_all('a'):
@@ -44,33 +79,20 @@ def scrape_pokemon_details(name):
 
 def download_pokemon_sprite(pokemon):
     base_url = "https://projectpokemon.org/home/docs/spriteindex_148/switch-sv-style-sprites-for-home-r153/"
-    sprite_folder = "Files\Sprites"
+    sprite_folder = "Files/Sprites"
 
     response = requests.get(base_url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
+    name = pokemon['Name']
     number = pokemon['Number'].zfill(4)
     form = pokemon['Form']
 
-    if 'Mega'  in form:
-        if 'X' in form:
-            alt_form_suffix = "_01"
-        elif 'Y' in form:
-            alt_form_suffix = "_02"
-        else:
-            alt_form_suffix = "_01"
-        filename = f"{number}{alt_form_suffix}.png"
-    elif 'Alolan' in form:
-        alt_form_suffix = "_01"
-        filename = f"{number}{alt_form_suffix}.png"
-    elif 'Galarian Meowth' in form:
-        alt_form_suffix = "_02"
-        filename = f"{number}{alt_form_suffix}.png"
-    elif 'Galarian' in form:
-        alt_form_suffix = "_01"
-        filename = f"{number}{alt_form_suffix}.png"
-    elif 'Hisuian' in form:
-        alt_form_suffix = "_01"
+    all_forms = [p for p in pokemon_data if p['Name'] == name]
+    current_form_index = all_forms.index(pokemon)
+
+    if len(all_forms) > 1 and form != '':
+        alt_form_suffix = f"_{current_form_index:02}"
         filename = f"{number}{alt_form_suffix}.png"
     else:
         filename = f"{number}.png"
@@ -93,7 +115,7 @@ def download_cry(pokemon):
     response = requests.get(cry_url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
-    name = pokemon['Name'].lower()
+    name = pokemon['Name'].lower().replace(' ', '')
     form = pokemon['Form']
 
 
@@ -132,29 +154,14 @@ def create_base_stat_graph(pokemon):
     name = pokemon['Name']
     form = pokemon['Form']
 
-    if 'Mega' in form:
-        if 'X' in form:
-            alt_form_suffix = "_01"
-        elif 'Y' in form:
-            alt_form_suffix = "_02"
-        else:
-            alt_form_suffix = "_01"
-        filename = f"{name}{alt_form_suffix}.png"
-    elif 'Alolan' in form:
-        alt_form_suffix = "_01"
-        filename = f"{name}{alt_form_suffix}.png"
-    elif 'Galarian Meowth' in form:
-        alt_form_suffix = "_02"
-        filename = f"{name}{alt_form_suffix}.png"
-    elif 'Galarian' in form:
-        alt_form_suffix = "_01"
-        filename = f"{name}{alt_form_suffix}.png"
-    elif 'Hisuian' in form:
-        alt_form_suffix = "_01"
+    all_forms = [p for p in pokemon_data if p['Name'] == name]
+    current_form_index = all_forms.index(pokemon)
+
+    if len(all_forms) > 1 and form != '':
+        alt_form_suffix = f"_{current_form_index:02}"
         filename = f"{name}{alt_form_suffix}.png"
     else:
         filename = f"{name}.png"
-
     colors = []
     for stat in stats:
         if stat < 60:
@@ -246,22 +253,17 @@ def create_pokemon_anki(pokemon_data):
 
     media_files = []
 
-    for x in range(0, 10):
+    for x in range(0, 203):
         pokemon = pokemon_data[x]
         # Assuming scrape_pokemon_details, download_pokemon_sprite, download_cry, and create_base_stat_graph are defined
-        classification, abilities = scrape_pokemon_details(pokemon['Name'])
+        classification, abilities = scrape_pokemon_details(pokemon)
         sprite_path = download_pokemon_sprite(pokemon).replace('\\', '/')
-        print(sprite_path)
         cry_path = download_cry(pokemon).replace('\\', '/')
-        print(cry_path)
         graph_path = create_base_stat_graph(pokemon).replace('\\', '/')  # Ensure this function returns the graph path
-        print(graph_path)
 
         # Prepare typing images (ensure these images exist in your media folder)
         type1_image = f"Files/Types/{pokemon['Type 1']}.png".replace('\\', '/')
-        print(type1_image)
         type2_image = f"Files/Types/{pokemon['Type 2']}.png".replace('\\', '/') if pokemon['Type 2'] else ""
-        print(type2_image)
 
         if sprite_path:
             sprite_path_abs = get_absolute_media_path(sprite_path)
@@ -318,22 +320,27 @@ def create_pokemon_anki(pokemon_data):
 
         # Add note to deck
         deck.add_note(note)
+        temp = pokemon['Name'] if (pokemon['Form'] == '') else (pokemon['Form'])
+        print(f"Pokemon Added: #{pokemon['Number']} {temp}")
 
-        print(media_files)
 
         # Create the Anki package with media files
     package = genanki.Package(deck)
     package.media_files = media_files
     package.write_to_file('pokemon_deck.apkg')
 
-
-classification, abilities = scrape_pokemon_details('Bulbasaur')
+all_forms = [p for p in pokemon_data if p['Name'] == 'Calyrex']
+index = pokemon_data.index(all_forms[2])
+poketest = pokemon_data[index]
+# classification, abilities = scrape_pokemon_details(poketest)
+# print(poketest['Name']) if (poketest['Form'] == '') else print(poketest['Form'])
 # print(classification, abilities)
 # print(pokemon_data)
 # create_base_stat_graph(pokemon_data[8])
 #
-# print(download_pokemon_sprite(pokemon_data[69]))
+print(download_pokemon_sprite(poketest))
 # print(download_cry(pokemon_data[7]))
 
+# print(pokemon_data)
+
 create_pokemon_anki(pokemon_data)
-print(pokemon_data)
