@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 import matplotlib
 matplotlib.use('Agg')
+from matplotlib.patches import FancyBboxPatch
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -19,7 +20,7 @@ with open('Files/pokemon.txt', 'r') as file:
 def scrape_pokemon_details(pokemon):
     name = pokemon['Name']
     form = pokemon['Form']
-    url = f"https://pokemondb.net/pokedex/{name.lower().replace(' ', '-')}"
+    url = f"https://pokemondb.net/pokedex/{name.lower().replace(' ', '-').replace('.', '')}"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
@@ -116,7 +117,7 @@ def download_pokemon_sprite(pokemon):
     # return None
 
     # New base URL format
-    name = pokemon['Name'].lower().replace(' ', '-')
+    name = pokemon['Name'].lower().replace(' ', '-').replace('.', '')
     url = f"https://pokemondb.net/pokedex/{name}"
 
     response = requests.get(url)
@@ -157,7 +158,7 @@ def download_cry(pokemon):
     response = requests.get(cry_url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
-    name = pokemon['Name'].lower().replace(' ', '').replace('-', '')
+    name = pokemon['Name'].lower().replace(' ', '').replace('-', '').replace('\'', '').replace('.', '')
     form = pokemon['Form']
 
     all_forms = [p for p in pokemon_data if p['Name'] == pokemon['Name']]
@@ -261,7 +262,6 @@ def download_cry(pokemon):
 
 def create_base_stat_graph(pokemon):
     labels = np.array(['HP', 'Attack', 'Defense', 'Sp.Attack', 'Sp.Defense', 'Speed'])
-    # Convert stats to integers for plotting
     stats = np.array([int(pokemon['HP']), int(pokemon['Attack']), int(pokemon['Defense']),
                       int(pokemon['Sp.Attack']), int(pokemon['Sp.Defense']), int(pokemon['Speed'])])
 
@@ -276,49 +276,52 @@ def create_base_stat_graph(pokemon):
         filename = f"{name}{alt_form_suffix}.png"
     else:
         filename = f"{name}.png"
-    colors = []
-    for stat in stats:
-        if stat < 60:
-            colors.append('#ff7f0f')
-        elif 60 <= stat < 80:
-            colors.append('#ffdd57')
-        elif 80 <= stat < 100:
-            colors.append('#ffdd57')
-        elif 100 <= stat < 120:
-            colors.append('#a0e515')
-        elif 120 <= stat <= 140:
-            colors.append('#1fb553')
-        else:
-            colors.append('#00c2b8')
 
+    colors = ['#ff7f0f' if stat < 60 else
+              '#ffdd57' if stat < 90 else
+              '#A0E515' if stat < 120 else
+              '#23cd5e' if stat <= 140 else
+              '#00c2b8' for stat in stats]
 
-    fig, ax = plt.subplots()
-    y_positions = range(len(stats))
+    fig, ax = plt.subplots(figsize=(9.5, 6))
+    y_positions = np.arange(len(stats))[::-1]
 
-    bars = ax.barh(y_positions, stats, color=colors, align='center', height=0.6, edgecolor='none', linewidth=0)
+    # Create rounded bars using FancyBboxPatch
+    bar_height = 0.5
+    max_bst_scale = 256
+    stat_label_x_pos = max_bst_scale * 1.01
+    for y_pos, stat, color in zip(y_positions, stats, colors):
+        bar = FancyBboxPatch((0, y_pos - bar_height / 2), width=stat, height=bar_height,
+                             boxstyle="round,pad=0.1,rounding_size=0.1",
+                             edgecolor='black', facecolor=color, linewidth=1)
+        ax.add_patch(bar)
+        # text_pos = max(stat + 5, max_bst_scale * 0.03)  # Adjust text position for visibility
+        # ax.text(text_pos, y_pos, f'{stat}', va='center', color='black', fontweight='normal')
+
+        # right_align_text_pos = max_bst_scale * 0.98  # Adjust as needed for perfect alignment
+        ax.text(stat_label_x_pos, y_pos, f'{stat}', va='center', ha='left', color='black', fontweight='normal', size=20)
 
     ax.set_yticks(y_positions)
-    ax.set_yticklabels(labels)
-    ax.invert_yaxis()  # Invert the y-axis to have the first entry at the top
+    ax.set_yticklabels(labels, fontsize=16)
+    ax.invert_yaxis()
 
     ax.xaxis.set_major_formatter(plt.NullFormatter())
+    ax.tick_params(bottom=False)  # Remove ticks at the bottom
 
+    ax.set_ylim(-0.5, len(stats) - 0.5)
+    plt.subplots_adjust(left=0.15, bottom=0.01, top=0.90)
 
-    for bar, value in zip(bars, stats):
-        ax.text(bar.get_width(), bar.get_y() + bar.get_height()/2, f' {value}', va='center', ha='left', color='black', fontweight='normal')
-
-    plt.tight_layout(pad=3.0)
-    max_stat = max(stats)
-    padding = max_stat * 0.1
-    ax.set_xlim(0, max_stat + padding)
+    ax.set_xlim(0, max_bst_scale)
 
     bst = sum(stats)
 
-    plt.title(f"(BST: {bst})", size=16)
+    # Adjust title placement
+    plt.title(f"BST: {bst}", size=28, pad=8)  # pad value might need adjustment
+
     plt.savefig(f"Files/BST/{filename}")
     plt.close()
 
-    return (f"Files/BST/{filename}")
+    return f"Files/BST/{filename}"
 
 def get_absolute_media_path(relative_path):
     # Ensure the path uses forward slashes for compatibility
@@ -326,7 +329,20 @@ def get_absolute_media_path(relative_path):
     # Construct an absolute path
     return os.path.abspath(normalized_path)
 
-def create_pokemon_anki(pokemon_data):
+def create_pokemon_anki(pokemon_data, input_gen):
+    generation_ranges = {
+        'Gen 1': (1, 151),
+        'Gen 2': (152, 251),
+        'Gen 3': (252, 386),
+        'Gen 4': (387, 493),
+        'Gen 5': (494, 649),
+        'Gen 6': (650, 721),
+        'Gen 7': (722, 809),
+        'Gen 8': (810, 905),
+        'Gen 9': (906, 1025),
+    }
+
+
     # Get note html and css
     with open('Files/styling.css', 'r') as file:
         styling = file.read()
@@ -360,92 +376,76 @@ def create_pokemon_anki(pokemon_data):
         css = styling,
     )
 
-    deck = genanki.Deck(
-        696969420,
-        'Deckaroni'
-    )
+    # deck = genanki.Deck(
+    #     696969420,
+    #     'Deckaroni'
+    # )
+    generation_decks = {gen: genanki.Deck(16000000 + idx, f"{gen} Deck") for idx, gen in enumerate(generation_ranges)}
+
+    def find_generation(pokedex_number):
+        for gen, (start, end) in generation_ranges.items():
+            if start <= pokedex_number <= end:
+                return gen
+        return None
 
     media_files = []
 
-    for x in range(0, 100):
-        pokemon = pokemon_data[x]
-        # Assuming scrape_pokemon_details, download_pokemon_sprite, download_cry, and create_base_stat_graph are defined
-        classification, abilities = scrape_pokemon_details(pokemon)
-        sprite_path = download_pokemon_sprite(pokemon).replace('\\', '/')
-        cry_path = download_cry(pokemon).replace('\\', '/')
-        graph_path = create_base_stat_graph(pokemon).replace('\\', '/')  # Ensure this function returns the graph path
+    for pokemon in pokemon_data:
+        pokemon_number = int(pokemon['Number'])
+        gen = find_generation(pokemon_number)
+        if gen == input_gen:
+            # Assuming scrape_pokemon_details, download_pokemon_sprite, download_cry, and create_base_stat_graph are defined
+            classification, abilities = scrape_pokemon_details(pokemon)
+            sprite_path = download_pokemon_sprite(pokemon).replace('\\', '/')
+            cry_path = download_cry(pokemon).replace('\\', '/')
+            graph_path = create_base_stat_graph(pokemon).replace('\\', '/')  # Ensure this function returns the graph path
 
-        # Prepare typing images (ensure these images exist in your media folder)
-        type1_image = f"Files/Types/{pokemon['Type 1']}.png".replace('\\', '/')
-        type2_image = f"Files/Types/{pokemon['Type 2']}.png".replace('\\', '/') if pokemon['Type 2'] else ""
+            # Prepare typing images (ensure these images exist in your media folder)
+            type1_image = f"Files/Types/{pokemon['Type 1']}.png".replace('\\', '/')
+            type2_image = f"Files/Types/{pokemon['Type 2']}.png".replace('\\', '/') if pokemon['Type 2'] else ""
 
-        if sprite_path:
-            sprite_path_abs = get_absolute_media_path(sprite_path)
-            if os.path.exists(sprite_path_abs) and sprite_path_abs not in media_files:
-                media_files.append(sprite_path_abs)
+            pokemon_name = pokemon['Name']
+            form = pokemon['Form']
+            if form:
+                pokemon_name = form
 
-        if cry_path:
-            cry_path_abs = get_absolute_media_path(cry_path)
-            if os.path.exists(cry_path_abs) and cry_path_abs not in media_files:
-                media_files.append(cry_path_abs)
+            # Create the note
+            note = genanki.Note(
+                model=model,
+                fields=[
+                    pokemon_name,
+                    classification,
+                    pokemon['Number'],
+                    ', '.join(abilities),  # Convert list of abilities to a string
+                    f'<img src="{os.path.basename(graph_path)}">',
+                    f'[sound:{os.path.basename(cry_path)}]',
+                    f'<img src="{os.path.basename(sprite_path)}">',
+                    f'<img src="{os.path.basename(type1_image)}">',
+                    f'<img src="{os.path.basename(type2_image)}">' if type2_image else '',
+                    '',
+                ])
 
-        if graph_path:
-            graph_path_abs = get_absolute_media_path(graph_path)
-            if os.path.exists(graph_path_abs) and graph_path_abs not in media_files:
-                media_files.append(graph_path_abs)
-
-        if type1_image:
-            type1_image_abs = get_absolute_media_path(type1_image)
-            if os.path.exists(type1_image_abs) and type1_image_abs not in media_files:
-                media_files.append(type1_image_abs)
-
-        if type2_image:
-            type2_image_abs = get_absolute_media_path(type2_image)
-            if os.path.exists(type2_image_abs) and type2_image_abs not in media_files:
-                media_files.append(type2_image_abs)
-
-
-        # Add paths to media_files if not already included
-        # for path in [sprite_path, cry_path, graph_path, type1_image, type2_image]:
-        #     full_path = os.path.abspath(path)  # Convert to absolute path for verification
-        #     if path and os.path.exists(full_path) and path not in media_files:
-        #         media_files.append(path)
-
-        pokemon_name = pokemon['Name']
-        form = pokemon['Form']
-        if form:
-            pokemon_name = form
-
-        # Create the note
-        note = genanki.Note(
-            model=model,
-            fields=[
-                pokemon_name,
-                classification,
-                pokemon['Number'],
-                ', '.join(abilities),  # Convert list of abilities to a string
-                f'<img src="{os.path.basename(graph_path)}">',
-                f'[sound:{os.path.basename(cry_path)}]',
-                f'<img src="{os.path.basename(sprite_path)}">',
-                f'<img src="{os.path.basename(type1_image)}">',
-                f'<img src="{os.path.basename(type2_image)}">' if type2_image else '',
-                '',
-            ])
-
-        # Add note to deck
-        deck.add_note(note)
-        temp = pokemon['Name'] if (pokemon['Form'] == '') else (pokemon['Form'])
-        print(f"Pokemon Added: #{pokemon['Number']} {temp}")
-        print(pokemon)
+            # Add note to deck
+            generation_decks[gen].add_note(note)
+            temp = pokemon['Name'] if (pokemon['Form'] == '') else (pokemon['Form'])
+            print(f"Pokemon Added: #{pokemon['Number']} {temp}")
+            print(gen)
+            print(pokemon)
 
 
         # Create the Anki package with media files
-    package = genanki.Package(deck)
-    package.media_files = media_files
-    package.write_to_file('pokemon_deck.apkg')
+    for gen, deck in generation_decks.items():
+        package = genanki.Package(deck)
+        package.media_files = media_files  # Assuming you have a list of media files
+        package.write_to_file(f'{gen}_pokemon_deck.apkg')
+
+
+
 
 # print(pokemon_data)
-# all_forms = [p for p in pokemon_data if p['Name'] == 'Nidoran-f']
+
+
+# all_forms = [p for p in pokemon_data if p['Name'] == 'Mime Jr.']
 # print(all_forms)
 # for form in all_forms:
 #     index = pokemon_data.index(form)
@@ -456,7 +456,7 @@ def create_pokemon_anki(pokemon_data):
 #     print(create_base_stat_graph(poketest))
 #     print(download_pokemon_sprite(poketest))
 #     print(download_cry(poketest))
+#
 
 
-
-create_pokemon_anki(pokemon_data)
+create_pokemon_anki(pokemon_data, 'Gen 1')
