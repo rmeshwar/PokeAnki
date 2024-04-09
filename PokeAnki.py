@@ -18,9 +18,10 @@ with open('Files/pokemon.txt', 'r') as file:
         pokemon_data.append(row);
 
 def scrape_pokemon_details(pokemon):
-    name = pokemon['Name']
+    og_name = pokemon['Name']
+    name = pokemon['Name'].lower().replace(' ', '-').replace('.', '').replace(':', '').replace('\'', '')
     form = pokemon['Form']
-    url = f"https://pokemondb.net/pokedex/{name.lower().replace(' ', '-').replace('.', '')}"
+    url = f"https://pokemondb.net/pokedex/{name}"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
@@ -44,7 +45,7 @@ def scrape_pokemon_details(pokemon):
     abilities_rows = soup.find_all('th', string='Abilities')
     abilities = []
 
-    all_forms = [p for p in pokemon_data if p['Name'] == name]
+    all_forms = [p for p in pokemon_data if p['Name'] == og_name]
     current_form_index = all_forms.index(pokemon)
 
     if form:  # If the Pokémon is an alternate form
@@ -84,40 +85,8 @@ def scrape_pokemon_details(pokemon):
     return classification, abilities
 
 def download_pokemon_sprite(pokemon):
-    # base_url = "https://projectpokemon.org/home/docs/spriteindex_148/switch-sv-style-sprites-for-home-r153/"
-    # sprite_folder = "Files/Sprites"
-    #
-    # response = requests.get(base_url)
-    # soup = BeautifulSoup(response.content, 'html.parser')
-    #
-    # name = pokemon['Name']
-    # number = pokemon['Number'].zfill(4)
-    # form = pokemon['Form']
-    #
-    # all_forms = [p for p in pokemon_data if p['Name'] == name]
-    # current_form_index = all_forms.index(pokemon)
-    #
-    # if len(all_forms) > 1 and form != '':
-    #     alt_form_suffix = f"_{current_form_index:02}"
-    #     filename = f"{number}{alt_form_suffix}.png"
-    # else:
-    #     filename = f"{number}.png"
-    #
-    # img_tag = soup.find('img', alt=f"{filename}")
-    #
-    # if img_tag:
-    #     image_url = img_tag['src']
-    #     response = requests.get(image_url)
-    #     if response.status_code == 200:
-    #         path = f"Files/Sprites/{filename}"
-    #         with open(path, 'wb') as f:
-    #             f.write(response.content)
-    #         return path
-    #
-    # return None
-
     # New base URL format
-    name = pokemon['Name'].lower().replace(' ', '-').replace('.', '')
+    name = pokemon['Name'].lower().replace(' ', '-').replace('.', '').replace(':', '').replace('\'', '')
     url = f"https://pokemondb.net/pokedex/{name}"
 
     response = requests.get(url)
@@ -126,8 +95,15 @@ def download_pokemon_sprite(pokemon):
 
     soup = BeautifulSoup(response.content, 'html.parser')
 
-    # Find all img tags within the artwork section
-    img_tags = soup.find_all('img', alt=lambda alt: alt and 'artwork' in alt)
+    # # Find all img tags within the artwork section
+    # img_tags = soup.find_all('img', alt=lambda alt: alt and 'artwork' in alt)
+
+    # Find all img tags that potentially represent Pokémon artwork
+    img_tags = soup.find_all('img', alt=True)
+
+    # Filter img tags to include only main and alternate forms based on the alt text
+    valid_img_tags = [img for img in img_tags if
+                      'form' in img['alt'].lower() or pokemon['Name'].lower() in img['alt'].lower() or 'artwork' in img['alt'].lower()]
 
     # If there are multiple forms, ensure we only consider unique artworks for each form
     all_forms = [p for p in pokemon_data if p['Name'].lower() == pokemon['Name'].lower()]
@@ -139,8 +115,8 @@ def download_pokemon_sprite(pokemon):
         filename_suffix = ''
 
     # Safety check to avoid index out of range
-    if current_form_index < len(img_tags):
-        image_url = img_tags[current_form_index]['src']
+    if current_form_index < len(valid_img_tags):
+        image_url = valid_img_tags[current_form_index]['src']
 
         filename = f"{pokemon['Number'].zfill(4)}{filename_suffix}.jpg"
         path = f"Files/Sprites/{filename}"
@@ -158,7 +134,7 @@ def download_cry(pokemon):
     response = requests.get(cry_url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
-    name = pokemon['Name'].lower().replace(' ', '').replace('-', '').replace('\'', '').replace('.', '')
+    name = pokemon['Name'].lower().replace(' ', '').replace('-', '').replace('\'', '').replace('.', '').replace(':', '')
     form = pokemon['Form']
 
     all_forms = [p for p in pokemon_data if p['Name'] == pokemon['Name']]
@@ -425,10 +401,34 @@ def create_pokemon_anki(pokemon_data, input_gen):
                     '',
                 ])
 
+            if sprite_path:
+                sprite_path_abs = get_absolute_media_path(sprite_path)
+                if os.path.exists(sprite_path_abs) and sprite_path_abs not in media_files:
+                    media_files.append(sprite_path_abs)
+            if cry_path:
+                cry_path_abs = get_absolute_media_path(cry_path)
+                if os.path.exists(cry_path_abs) and cry_path_abs not in media_files:
+                    media_files.append(cry_path_abs)
+            if graph_path:
+                graph_path_abs = get_absolute_media_path(graph_path)
+                if os.path.exists(graph_path_abs) and graph_path_abs not in media_files:
+                    media_files.append(graph_path_abs)
+            if type1_image:
+                type1_image_abs = get_absolute_media_path(type1_image)
+                if os.path.exists(type1_image_abs) and type1_image_abs not in media_files:
+                    media_files.append(type1_image_abs)
+            if type2_image:
+                type2_image_abs = get_absolute_media_path(type2_image)
+                if os.path.exists(type2_image_abs) and type2_image_abs not in media_files:
+                    media_files.append(type2_image_abs)
+
+            media_files.append("Files/_tiles1.png")
+            media_files.append("Files/_Pixelfont.ttf")
+
             # Add note to deck
             generation_decks[gen].add_note(note)
             temp = pokemon['Name'] if (pokemon['Form'] == '') else (pokemon['Form'])
-            print(f"Pokemon Added: #{pokemon['Number']} {temp}")
+            print(f"\nPokemon Added: #{pokemon['Number']} {temp}")
             print(gen)
             print(pokemon)
 
@@ -439,13 +439,22 @@ def create_pokemon_anki(pokemon_data, input_gen):
         package.media_files = media_files  # Assuming you have a list of media files
         package.write_to_file(f'{gen}_pokemon_deck.apkg')
 
-
+def create_all():
+    create_pokemon_anki(pokemon_data, 'Gen 1')
+    create_pokemon_anki(pokemon_data, 'Gen 2')
+    create_pokemon_anki(pokemon_data, 'Gen 3')
+    create_pokemon_anki(pokemon_data, 'Gen 4')
+    create_pokemon_anki(pokemon_data, 'Gen 5')
+    create_pokemon_anki(pokemon_data, 'Gen 6')
+    create_pokemon_anki(pokemon_data, 'Gen 7')
+    create_pokemon_anki(pokemon_data, 'Gen 8')
+    create_pokemon_anki(pokemon_data, 'Gen 9')
 
 
 # print(pokemon_data)
 
 
-# all_forms = [p for p in pokemon_data if p['Name'] == 'Mime Jr.']
+# all_forms = [p for p in pokemon_data if p['Name'] == 'Sirfetch\'d']
 # print(all_forms)
 # for form in all_forms:
 #     index = pokemon_data.index(form)
@@ -456,7 +465,6 @@ def create_pokemon_anki(pokemon_data, input_gen):
 #     print(create_base_stat_graph(poketest))
 #     print(download_pokemon_sprite(poketest))
 #     print(download_cry(poketest))
-#
+# # # # #
 
-
-create_pokemon_anki(pokemon_data, 'Gen 1')
+create_all()

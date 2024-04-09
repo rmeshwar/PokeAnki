@@ -802,7 +802,7 @@ Number,Name,Form,Type 1,Type 2,HP,Attack,Defense,Sp.Attack,Sp.Defense,Speed
 666,Vivillon,,Bug,Flying,80,52,50,90,50,89
 667,Litleo,,Fire,Normal,62,50,58,73,54,72
 668,Pyroar,,Fire,Normal,86,68,72,109,66,106
-669,Flabébé,,Fairy,,44,38,39,61,79,42
+669,Flabebe,,Fairy,,44,38,39,61,79,42
 670,Floette,,Fairy,,54,45,47,75,98,52
 671,Florges,,Fairy,,78,65,68,112,154,75
 672,Skiddo,,Grass,,66,65,48,62,57,52
